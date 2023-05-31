@@ -3,6 +3,7 @@ const asyncHandler = require("../middlewares/async");
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
+const jwt = require("jsonwebtoken");
 const web3 = require("../utils/Web3Provider");
 
 // @desc      Get all users
@@ -34,23 +35,48 @@ exports.getLoggedUser = asyncHandler(async (req, res, next) => {
 // @route     GET /api/users/:email/:password
 // @access    Private
 exports.loginUser = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.params;
+  const { email, password } = req.body;
   if (!email || !password)
     return next(new ErrorResponse(403, "Fields missing"));
   const user = await User.findOne({ email });
   if (!user) return next(new ErrorResponse(404, "User not found"));
-  console.log(password, "\n", user.password);
   await bcrypt.compare(password, user.password, (err, same) => {
     if (err) return next(new ErrorResponse(500, "Failed to compare password"));
     if (same) {
-      res.status(200).json({
-        success: true,
-        data: user,
+      const token = jwt.sign({ user }, process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_EXPIRES_IN,
       });
+      console.log(user);
+      res.status(200).json({ token });
     } else {
       return next(new ErrorResponse(401, "Passwords do not match"));
     }
   });
+});
+
+// @desc      Authorize Token
+// @route     GET api/auth/
+// @access    Private
+exports.authorizeToken = asyncHandler(async (req, res, next) => {
+  try {
+    console.log("HELLLLOOOOOO TRYYYYYYYYYYYYYYY");
+    const token = String(req?.headers?.authorization?.replace("Bearer ", ""));
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.email);
+    res.status(200).json({
+      authenticated: true,
+      user: {
+        name: user.name,
+        email: user.email,
+        wallet: user.walletAddress,
+        privateKey: user.privateKey,
+      },
+    });
+    next();
+  } catch (err) {
+    console.log("HELLLLOOOOOO CATCHHHHH");
+    res.status(401).json({ message: "Invalid Token" });
+  }
 });
 
 // @desc      Create user
@@ -67,12 +93,17 @@ exports.registerUser = asyncHandler(async (req, res, next) => {
     walletAddress: wallet.address,
     privateKey: wallet.privateKey,
   });
-  const user = await User.create(data);
 
-  res.status(201).json({
-    success: true,
-    data: user,
+  // Add check for existing users
+  const user = await User.findOne({ email });
+  if (user) return next(new ErrorResponse(400, "User already exists"));
+
+  const newUser = await User.create(data);
+  const token = jwt.sign({ user: newUser }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN,
   });
+
+  res.status(201).json({ token });
 });
 
 // @desc      Send Tokens
