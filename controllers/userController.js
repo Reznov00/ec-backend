@@ -59,10 +59,9 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
 // @access    Private
 exports.authorizeToken = asyncHandler(async (req, res, next) => {
   try {
-    console.log("HELLLLOOOOOO TRYYYYYYYYYYYYYYY");
     const token = String(req?.headers?.authorization?.replace("Bearer ", ""));
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.user.email);
+    const user = await User.findOne({ email: decoded.user.email });
     res.status(200).json({
       authenticated: true,
       user: {
@@ -74,7 +73,6 @@ exports.authorizeToken = asyncHandler(async (req, res, next) => {
     });
     next();
   } catch (err) {
-    console.log("HELLLLOOOOOO CATCHHHHH");
     res.status(401).json({ message: "Invalid Token" });
   }
 });
