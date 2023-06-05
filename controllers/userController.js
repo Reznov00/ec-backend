@@ -69,6 +69,7 @@ exports.authorizeToken = asyncHandler(async (req, res, next) => {
         email: user.email,
         wallet: user.walletAddress,
         privateKey: user.privateKey,
+        balance: user.balance
       },
     });
     next();
