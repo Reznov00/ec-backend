@@ -69,7 +69,7 @@ exports.authorizeToken = asyncHandler(async (req, res, next) => {
         email: user.email,
         wallet: user.walletAddress,
         privateKey: user.privateKey,
-        balance: user.balance
+        balance: user.balance,
       },
     });
     next();
@@ -114,6 +114,7 @@ exports.sendTokens = asyncHandler(async (req, res, next) => {
     from: data.snd_address,
     to: data.rcv_address,
     value: data.value,
+    gas: data.gas,
   };
   web3.eth.accounts
     .signTransaction(txData, data.snd_key)
