@@ -26,8 +26,8 @@ const UserSchema = mongoose.Schema({
     type: String,
   },
   balance: {
-    type: String,
-    default: 100,
+    type: mongoose.Types.Decimal128,
+    default: 100.0,
   },
 });
 // Encrypt password using bcrypt
