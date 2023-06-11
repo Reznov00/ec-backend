@@ -5,11 +5,10 @@ const {
   registerUser,
   updateUser,
   deleteUser,
-  getLoggedUser,
   verifyUser,
   changePassword,
-  sendTokens,
   authorizeToken,
+  sendPoints,
 } = require("../controllers/userController");
 const auth = require("../middlewares/auth");
 
@@ -25,6 +24,6 @@ router.route("/update/:id").put(updateUser);
 router.route("/delete/:id").delete(deleteUser);
 router.route("/changePassword/:id").put(changePassword);
 
-router.route("/sendTokens").post(sendTokens);
+router.route("/sendPoints").post(sendPoints);
 
 module.exports = router;

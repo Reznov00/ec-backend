@@ -105,53 +105,55 @@ exports.registerUser = asyncHandler(async (req, res, next) => {
   res.status(201).json({ token });
 });
 
-// @desc      Send Tokens
-// @route     POST api/sendTokens
+// @desc      Send Points
+// @route     POST api/sendPoints
 // @access    Private
-exports.sendTokens = asyncHandler(async (req, res, next) => {
-  let data = req.body;
-  const txData = {
-    from: data.snd_address,
-    to: data.rcv_address,
-    value: data.value,
-    gas: data.gas,
-  };
+exports.sendPoints = asyncHandler(async (req, res, next) => {
+  let { mode, email, snd_address, privateKey, rcv_address, value } = req.body;
+  let data, rec;
+  if (mode === "wallet") {
+    data = {
+      from: snd_address,
+      to: rcv_address,
+      value: parseInt(value),
+      gas: 21000,
+    };
+    console.log(data);
+  } else {
+    const rec = await User.findOne({ email });
+    data = {
+      from: snd_address,
+      to: rec.walletAddress,
+      value: parseInt(value),
+      gas: 21000,
+    };
+    console.log(data);
+  }
+  if (mode === "email") {
+    query = { email: rcv_address };
+  } else {
+    query = { walletAddress: rcv_address };
+  }
   web3.eth.accounts
-    .signTransaction(txData, data.snd_key)
-    .then((signedTx) => {
-      const signedTransaction = signedTx.rawTransaction;
-      // Proceed to broadcast the signedTransaction
+    .signTransaction(data, privateKey)
+    .then(async (signedTx) => {
       console.log(signedTx);
-      // web3.eth
-      //   .sendSignedTransaction(signedTransaction)
-      //   .on("transactionHash", (txHash) => {
-      //     console.log("Transaction Hash:", txHash);
-      //     web3.eth
-      //       .getTransactionReceipt(txHash)
-      //       .then((receipt) => {
-      //         if (receipt && receipt.blockNumber) {
-      //           console.log("Transaction confirmed!");
-      //           // Proceed to update user balances
-      //         } else {
-      //           console.log(
-      //             "Transaction not yet confirmed. Retry after some time."
-      //           );
-      //           // Implement retry logic or wait for confirmation to proceed
-      //         }
-      //       })
-      //       .catch((error) => {
-      //         console.error("Failed to get transaction receipt:", error);
-      //       });
-      //   })
-      //   .on("error", (error) => {
-      //     console.error("Failed to broadcast transaction:", error);
-      //   });
+      const userByEmail = await User.findOneAndUpdate(
+        { email: email },
+        { $inc: { balance: -value } },
+        { new: true }
+      );
+      const userByWallet = await User.findOneAndUpdate(
+        query,
+        { $inc: { balance: value } },
+        { new: true }
+      );
     })
     .catch((error) => {
       console.error("Failed to sign transaction:", error);
     });
 
-  res.status(201).json({
+  res.status(200).json({
     success: true,
     data: data,
   });
