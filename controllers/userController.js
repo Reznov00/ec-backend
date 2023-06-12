@@ -1,8 +1,10 @@
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middlewares/async");
 const User = require("../models/User");
+const Transaction = require("../models/Transaction");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
+const jwt = require("jsonwebtoken");
 const web3 = require("../utils/Web3Provider");
 
 // @desc      Get all users
@@ -34,23 +36,56 @@ exports.getLoggedUser = asyncHandler(async (req, res, next) => {
 // @route     GET /api/users/:email/:password
 // @access    Private
 exports.loginUser = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.params;
+  const { email, password } = req.body;
   if (!email || !password)
     return next(new ErrorResponse(403, "Fields missing"));
   const user = await User.findOne({ email });
   if (!user) return next(new ErrorResponse(404, "User not found"));
-  console.log(password, "\n", user.password);
   await bcrypt.compare(password, user.password, (err, same) => {
     if (err) return next(new ErrorResponse(500, "Failed to compare password"));
     if (same) {
-      res.status(200).json({
-        success: true,
-        data: user,
+      const token = jwt.sign({ user }, process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_EXPIRES_IN,
       });
+      console.log(user);
+      res.status(200).json({ token });
     } else {
       return next(new ErrorResponse(401, "Passwords do not match"));
     }
   });
+});
+
+const authorize = async (req) => {
+  try {
+    const token = String(req?.headers?.authorization?.replace("Bearer ", ""));
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findOne({ email: decoded.user.email });
+    return user;
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+// @desc      Authorize Token
+// @route     GET api/auth/
+// @access    Private
+exports.authorizeToken = asyncHandler(async (req, res, next) => {
+  try {
+    const user = await authorize(req);
+    res.status(200).json({
+      authenticated: true,
+      user: {
+        name: user.name,
+        email: user.email,
+        wallet: user.walletAddress,
+        privateKey: user.privateKey,
+        balance: user.balance,
+      },
+    });
+    next();
+  } catch (err) {
+    res.status(401).json({ message: "Invalid Token" });
+  }
 });
 
 // @desc      Create user
@@ -62,68 +97,102 @@ exports.registerUser = asyncHandler(async (req, res, next) => {
   if (!name || !email || !password)
     return next(new ErrorResponse(400, "Fields missing"));
   const wallet = web3.eth.accounts.create();
-  console.log(wallet);
   data = Object.assign(req.body, {
     walletAddress: wallet.address,
     privateKey: wallet.privateKey,
   });
-  const user = await User.create(data);
 
-  res.status(201).json({
-    success: true,
-    data: user,
+  // Check for existing users
+  const user = await User.findOne({ email });
+  if (user) return next(new ErrorResponse(400, "User already exists"));
+
+  const newUser = await User.create(data);
+  const token = jwt.sign({ user: newUser }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN,
   });
+
+  res.status(201).json({ token });
 });
 
-// @desc      Send Tokens
-// @route     POST api/sendTokens
+// @desc      Send Points
+// @route     POST api/sendPoints
 // @access    Private
-exports.sendTokens = asyncHandler(async (req, res, next) => {
-  let data = req.body;
-  const txData = {
-    from: data.snd_address,
-    to: data.rcv_address,
-    value: data.value,
-  };
+exports.sendPoints = asyncHandler(async (req, res, next) => {
+  let { mode, email, snd_address, privateKey, rcv_address, value } = req.body;
+  let data;
+  if (mode === "wallet") {
+    data = {
+      from: snd_address,
+      to: rcv_address,
+      value: parseInt(value),
+      gas: 21000,
+    };
+    console.log(data);
+  } else {
+    const rec = await User.findOne({ email });
+    data = {
+      from: snd_address,
+      to: rec.walletAddress,
+      value: parseInt(value),
+      gas: 21000,
+    };
+    console.log(data);
+  }
+  if (mode === "email") {
+    query = { email: rcv_address };
+  } else {
+    query = { walletAddress: rcv_address };
+  }
   web3.eth.accounts
-    .signTransaction(txData, data.snd_key)
-    .then((signedTx) => {
-      const signedTransaction = signedTx.rawTransaction;
-      // Proceed to broadcast the signedTransaction
+    .signTransaction(data, privateKey)
+    .then(async (signedTx) => {
       console.log(signedTx);
-      // web3.eth
-      //   .sendSignedTransaction(signedTransaction)
-      //   .on("transactionHash", (txHash) => {
-      //     console.log("Transaction Hash:", txHash);
-      //     web3.eth
-      //       .getTransactionReceipt(txHash)
-      //       .then((receipt) => {
-      //         if (receipt && receipt.blockNumber) {
-      //           console.log("Transaction confirmed!");
-      //           // Proceed to update user balances
-      //         } else {
-      //           console.log(
-      //             "Transaction not yet confirmed. Retry after some time."
-      //           );
-      //           // Implement retry logic or wait for confirmation to proceed
-      //         }
-      //       })
-      //       .catch((error) => {
-      //         console.error("Failed to get transaction receipt:", error);
-      //       });
-      //   })
-      //   .on("error", (error) => {
-      //     console.error("Failed to broadcast transaction:", error);
-      //   });
+      const userByEmail = await User.findOneAndUpdate(
+        { email: email },
+        { $inc: { balance: -value } },
+        { new: true }
+      );
+      const userByWallet = await User.findOneAndUpdate(
+        query,
+        { $inc: { balance: value } },
+        { new: true }
+      );
+
+      const tx = await Transaction.create({
+        txHash: signedTx.transactionHash,
+        from: data.from,
+        to: data.to,
+        value: value,
+      });
     })
     .catch((error) => {
       console.error("Failed to sign transaction:", error);
     });
 
-  res.status(201).json({
+  res.status(200).json({
     success: true,
     data: data,
   });
+});
+
+// @desc      Get User Transactios
+// @route     GET /api/transactions/
+// @access    Private
+exports.getUserTransactions = asyncHandler(async (req, res, next) => {
+  try {
+    const user = await authorize(req);
+    if (!user) res.status(403).send({ error: "User not authorized" });
+    const tx = await Transaction.find({ from: user.walletAddress });
+    res.status(200).send({
+      success: true,
+      data: tx,
+    });
+  } catch (e) {
+    console.error(e);
+    res
+      .status(500)
+      .send({ error: "Something went wrong. Please try again later" });
+  }
 });
 
 // @desc      Create user
