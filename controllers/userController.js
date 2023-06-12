@@ -1,6 +1,7 @@
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middlewares/async");
 const User = require("../models/User");
+const Transaction = require("../models/Transaction");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
 const jwt = require("jsonwebtoken");
@@ -54,14 +55,23 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
   });
 });
 
+const authorize = async (req) => {
+  try {
+    const token = String(req?.headers?.authorization?.replace("Bearer ", ""));
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findOne({ email: decoded.user.email });
+    return user;
+  } catch (e) {
+    console.error(e);
+  }
+};
+
 // @desc      Authorize Token
 // @route     GET api/auth/
 // @access    Private
 exports.authorizeToken = asyncHandler(async (req, res, next) => {
   try {
-    const token = String(req?.headers?.authorization?.replace("Bearer ", ""));
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findOne({ email: decoded.user.email });
+    const user = await authorize(req);
     res.status(200).json({
       authenticated: true,
       user: {
@@ -87,13 +97,12 @@ exports.registerUser = asyncHandler(async (req, res, next) => {
   if (!name || !email || !password)
     return next(new ErrorResponse(400, "Fields missing"));
   const wallet = web3.eth.accounts.create();
-  console.log(wallet);
   data = Object.assign(req.body, {
     walletAddress: wallet.address,
     privateKey: wallet.privateKey,
   });
 
-  // Add check for existing users
+  // Check for existing users
   const user = await User.findOne({ email });
   if (user) return next(new ErrorResponse(400, "User already exists"));
 
@@ -110,7 +119,7 @@ exports.registerUser = asyncHandler(async (req, res, next) => {
 // @access    Private
 exports.sendPoints = asyncHandler(async (req, res, next) => {
   let { mode, email, snd_address, privateKey, rcv_address, value } = req.body;
-  let data, rec;
+  let data;
   if (mode === "wallet") {
     data = {
       from: snd_address,
@@ -148,6 +157,13 @@ exports.sendPoints = asyncHandler(async (req, res, next) => {
         { $inc: { balance: value } },
         { new: true }
       );
+
+      const tx = await Transaction.create({
+        txHash: signedTx.transactionHash,
+        from: data.from,
+        to: data.to,
+        value: value,
+      });
     })
     .catch((error) => {
       console.error("Failed to sign transaction:", error);
@@ -157,6 +173,26 @@ exports.sendPoints = asyncHandler(async (req, res, next) => {
     success: true,
     data: data,
   });
+});
+
+// @desc      Get User Transactios
+// @route     GET /api/transactions/
+// @access    Private
+exports.getUserTransactions = asyncHandler(async (req, res, next) => {
+  try {
+    const user = await authorize(req);
+    if (!user) res.status(403).send({ error: "User not authorized" });
+    const tx = await Transaction.find({ from: user.walletAddress });
+    res.status(200).send({
+      success: true,
+      data: tx,
+    });
+  } catch (e) {
+    console.error(e);
+    res
+      .status(500)
+      .send({ error: "Something went wrong. Please try again later" });
+  }
 });
 
 // @desc      Create user
