@@ -16,11 +16,12 @@ const auth = require("../middlewares/auth");
 const router = express.Router({ mergeParams: true });
 
 router.route("/").get(getUsers);
-router.route("/verify").post(verifyUser);
 
 router.route("/login").post(loginUser);
 router.route("/register").post(registerUser);
+router.route("/verify").post(verifyUser);
 router.route("/auth").get(authorizeToken);
+
 router.route("/update/:id").put(updateUser);
 router.route("/delete/:id").delete(deleteUser);
 router.route("/changePassword/:id").put(changePassword);
