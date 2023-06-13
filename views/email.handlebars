@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>EnviroControl - Email Verification</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* Add your custom styles here */
+    body {
+      font-family: Poppins, sans-serif;
+      background-color: #F8F8F8;
+      color: #333333;
+    }
+    .back{
+      background-color: #69ecac;
+    }
+    .container {
+      max-width: 700px;
+      border-radius: 40px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .otp-box {
+      background-color: #FFFFFF;
+      border: 1px solid #D3D3D3;
+      padding: 20px;
+    }
+    .otp-heading {
+      font-size: 18px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .otp-code {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .note {
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="back">
+    <div class="container">
+      <div class="otp-box">
+        <div class="logo">
+          <img src="https://i.imgur.com/CSZ1Arh.png" alt="EnviroControl Logo" width="200">
+        </div>
+        <h2 class="otp-heading">Email Verification - EnviroControl</h2>
+        <p class="note">Hello <span style="text-transform: uppercase">{{name}}</span>,<br>Please use this One-Time Password (OTP) to verify your email address.</p>
+        <p class="otp-code">{{OTP}}</p>
+        <p class="note">This OTP is valid for a limited time and can only be used once.</p>
+      </div>
+      <div class="footer">
+        <p>&copy; {{currentYear}} EnviroControl. All rights reserved.</p>
+        <p>For any inquiries, please contact us at <a href="mailto:info.envirocontrol@gmail.com">info.envirocontrol@gmail.com</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

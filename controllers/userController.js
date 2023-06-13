@@ -4,6 +4,9 @@ const User = require("../models/User");
 const Transaction = require("../models/Transaction");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
+const handlebars = require("handlebars");
+const fs = require("fs");
+const path = require("path");
 const jwt = require("jsonwebtoken");
 const web3 = require("../utils/Web3Provider");
 
@@ -196,7 +199,7 @@ exports.getUserTransactions = asyncHandler(async (req, res, next) => {
 });
 
 // @desc      Create user
-// @route     POST /api/users/verify
+// @route     POST /api/verify
 // @access    Private
 exports.verifyUser = asyncHandler(async (req, res, next) => {
   const user = await User.find({ email: req.body.email });
@@ -207,6 +210,10 @@ exports.verifyUser = asyncHandler(async (req, res, next) => {
     });
     // return next(new ErrorResponse(403, 'User Already Registered'));
   } else {
+    const filePath = path.join(__dirname, "../views/email.handlebars");
+    const source = fs.readFileSync(filePath, "utf8");
+    const template = handlebars.compile(source);
+
     var transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -215,11 +222,15 @@ exports.verifyUser = asyncHandler(async (req, res, next) => {
       },
     });
     var OTP = Math.floor(100000 + Math.random() * 100001);
+    const name = req.body.name;
+    const html = template({ name, OTP });
     var mailOptions = {
       from: process.env.MAIL_SENDER,
       to: req.body.email,
-      subject: "Verify User",
-      text: `Hello, ${req.body.name}! Your OTP is ${OTP}`,
+      subject: "Email Verification - EnviroControl",
+      html: html,
+      // subject: "Verify User",
+      // text: `Hello, ${req.body.name}! Your OTP is ${OTP}`,
     };
 
     transporter.sendMail(mailOptions, function (error, info) {
