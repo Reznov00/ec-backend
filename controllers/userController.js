@@ -43,7 +43,10 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
   if (!email || !password)
     return next(new ErrorResponse(403, "Fields missing"));
   const user = await User.findOne({ email });
-  if (!user) return next(new ErrorResponse(404, "User not found"));
+  if (!user) {
+    res.status(404).json({ success: false, message: "Invalid Credentials" });
+    return next(new ErrorResponse(404, "User not found"));
+  }
   await bcrypt.compare(password, user.password, (err, same) => {
     if (err) return next(new ErrorResponse(500, "Failed to compare password"));
     if (same) {
