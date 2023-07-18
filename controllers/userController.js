@@ -53,6 +53,7 @@ exports.getLoggedUser = asyncHandler(async (req, res, next) => {
 // @access    Private
 exports.loginUser = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
+  console.log(`${email} ------ ${password}`);
   if (!email || !password)
     return next(new ErrorResponse(403, "Fields missing"));
   const user = await User.findOne({ email });
