@@ -14,12 +14,25 @@ const web3 = require("../utils/Web3Provider");
 // @route     GET /api/users
 // @access    Admin
 exports.getUsers = asyncHandler(async (req, res, next) => {
-  const users = await User.find();
-  res.status(200).json({
-    success: true,
-    count: users.length,
-    data: users,
-  });
+  const user = await authorize(req);
+  if (user) {
+    if (user.role !== "admin") {
+      res.status(401).json({
+        message: "Not Authorized",
+      });
+      return;
+    }
+    const users = await User.find();
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users,
+    });
+  } else {
+    res.status(404).json({
+      message: "Bad request",
+    });
+  }
 });
 
 // @desc      Get single user
@@ -40,6 +53,7 @@ exports.getLoggedUser = asyncHandler(async (req, res, next) => {
 // @access    Private
 exports.loginUser = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
+  console.log(`${email} ------ ${password}`);
   if (!email || !password)
     return next(new ErrorResponse(403, "Fields missing"));
   const user = await User.findOne({ email });
@@ -53,7 +67,6 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
       const token = jwt.sign({ user }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN,
       });
-      console.log(user);
       res.status(200).json({ token });
     } else {
       return next(new ErrorResponse(401, "Passwords do not match"));
@@ -63,6 +76,7 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
 
 const authorize = async (req) => {
   try {
+    if (!req.headers.authorization) return;
     const token = String(req?.headers?.authorization?.replace("Bearer ", ""));
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findOne({ email: decoded.user.email });
@@ -86,6 +100,7 @@ exports.authorizeToken = asyncHandler(async (req, res, next) => {
         wallet: user.walletAddress,
         privateKey: user.privateKey,
         balance: user.balance,
+        role: user.role,
       },
     });
     next();
@@ -99,6 +114,11 @@ exports.authorizeToken = asyncHandler(async (req, res, next) => {
 // @access    Private
 exports.registerUser = asyncHandler(async (req, res, next) => {
   let data = req.body;
+  if (data.role && data.role === "admin") {
+    res.status(500).send("Fatal Error");
+    console.error("Fatal Error");
+    return;
+  }
   const { name, email, password } = data;
   if (!name || !email || !password)
     return next(new ErrorResponse(400, "Fields missing"));
