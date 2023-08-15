@@ -105,7 +105,7 @@ exports.authorizeToken = asyncHandler(async (req, res, next) => {
     });
     next();
   } catch (err) {
-    res.status(401).json({ message: "Invalid Token" });
+    res.status(401).json({ success: false, message: "Invalid Token" });
   }
 });
 
