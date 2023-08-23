@@ -153,16 +153,16 @@ exports.sendPoints = asyncHandler(async (req, res, next) => {
       value: parseInt(value),
       gas: 21000,
     };
-    console.log(data);
+    console.log("wallet", data);
   } else {
-    const rec = await User.findOne({ email });
+    const rec = await User.findOne({ email: rcv_address });
     data = {
       from: snd_address,
       to: rec.walletAddress,
       value: parseInt(value),
       gas: 21000,
     };
-    console.log(data);
+    console.log("email -> wallet", data);
   }
   if (mode === "email") {
     query = { email: rcv_address };
@@ -172,7 +172,6 @@ exports.sendPoints = asyncHandler(async (req, res, next) => {
   web3.eth.accounts
     .signTransaction(data, privateKey)
     .then(async (signedTx) => {
-      console.log(signedTx);
       const userByEmail = await User.findOneAndUpdate(
         { email: email },
         { $inc: { balance: -value } },
@@ -208,10 +207,12 @@ exports.getUserTransactions = asyncHandler(async (req, res, next) => {
   try {
     const user = await authorize(req);
     if (!user) res.status(403).send({ error: "User not authorized" });
-    const tx = await Transaction.find({ from: user.walletAddress });
+    const sent = await Transaction.find({ from: user.walletAddress });
+    const rcv = await Transaction.find({ to: user.walletAddress });
+    const data = { from: sent, to: rcv };
     res.status(200).send({
       success: true,
-      data: tx,
+      data: data,
     });
   } catch (e) {
     console.error(e);
