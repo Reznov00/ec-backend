@@ -13,6 +13,9 @@ const TransactionSchema = mongoose.Schema({
   value: {
     type: Number,
   },
+  createdAt: {
+    type: Date,
+  },
 });
 
 module.exports = new mongoose.model("Transactions", TransactionSchema);

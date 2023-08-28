@@ -153,16 +153,14 @@ exports.sendPoints = asyncHandler(async (req, res, next) => {
       value: parseInt(value),
       gas: 21000,
     };
-    console.log(data);
   } else {
-    const rec = await User.findOne({ email });
+    const rec = await User.findOne({ email: rcv_address });
     data = {
       from: snd_address,
       to: rec.walletAddress,
       value: parseInt(value),
       gas: 21000,
     };
-    console.log(data);
   }
   if (mode === "email") {
     query = { email: rcv_address };
@@ -172,7 +170,6 @@ exports.sendPoints = asyncHandler(async (req, res, next) => {
   web3.eth.accounts
     .signTransaction(data, privateKey)
     .then(async (signedTx) => {
-      console.log(signedTx);
       const userByEmail = await User.findOneAndUpdate(
         { email: email },
         { $inc: { balance: -value } },
@@ -189,6 +186,7 @@ exports.sendPoints = asyncHandler(async (req, res, next) => {
         from: data.from,
         to: data.to,
         value: value,
+        createdAt: Date.now(),
       });
     })
     .catch((error) => {
@@ -208,10 +206,30 @@ exports.getUserTransactions = asyncHandler(async (req, res, next) => {
   try {
     const user = await authorize(req);
     if (!user) res.status(403).send({ error: "User not authorized" });
-    const tx = await Transaction.find({ from: user.walletAddress });
+    const transactions = await Transaction.aggregate([
+      {
+        $match: {
+          $or: [{ from: user.walletAddress }, { to: user.walletAddress }],
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          transaction: { $first: "$$ROOT" },
+        },
+      },
+      {
+        $replaceRoot: { newRoot: "$transaction" },
+      },
+      {
+        $sort: {
+          createdAt: -1, // Sort in descending order (newest first)
+        },
+      },
+    ]);
     res.status(200).send({
       success: true,
-      data: tx,
+      data: transactions,
     });
   } catch (e) {
     console.error(e);
