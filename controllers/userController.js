@@ -1,14 +1,16 @@
-const ErrorResponse = require("../utils/errorResponse");
-const asyncHandler = require("../middlewares/async");
-const User = require("../models/User");
-const Transaction = require("../models/Transaction");
-const bcrypt = require("bcrypt");
-const nodemailer = require("nodemailer");
-const handlebars = require("handlebars");
 const fs = require("fs");
 const path = require("path");
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
+const handlebars = require("handlebars");
+
+const User = require("../models/User");
+const Transaction = require("../models/Transaction");
+
 const web3 = require("../utils/Web3Provider");
+const asyncHandler = require("../middlewares/async");
+const ErrorResponse = require("../utils/errorResponse");
 
 // @desc      Get all users
 // @route     GET /api/users
@@ -48,12 +50,11 @@ exports.getLoggedUser = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc      Get single user/Login user
-// @route     GET /api/users/:email/:password
+// @desc      Login user
+// @route     POST /api/login
 // @access    Private
 exports.loginUser = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
-  console.log(`${email} ------ ${password}`);
   if (!email || !password)
     return next(new ErrorResponse(403, "Fields missing"));
   const user = await User.findOne({ email });
@@ -101,6 +102,7 @@ exports.authorizeToken = asyncHandler(async (req, res, next) => {
         privateKey: user.privateKey,
         balance: user.balance,
         role: user.role,
+        sharedPoints: user.sharedPoints,
       },
     });
     next();
@@ -172,7 +174,7 @@ exports.sendPoints = asyncHandler(async (req, res, next) => {
     .then(async (signedTx) => {
       const userByEmail = await User.findOneAndUpdate(
         { email: email },
-        { $inc: { balance: -value } },
+        { $inc: { balance: -value, sharedPoints: value } },
         { new: true }
       );
       const userByWallet = await User.findOneAndUpdate(
@@ -223,7 +225,7 @@ exports.getUserTransactions = asyncHandler(async (req, res, next) => {
       },
       {
         $sort: {
-          createdAt: -1, // Sort in descending order (newest first)
+          createdAt: -1,
         },
       },
     ]);
@@ -231,8 +233,53 @@ exports.getUserTransactions = asyncHandler(async (req, res, next) => {
       success: true,
       data: transactions,
     });
-  } catch (e) {
-    console.error(e);
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .send({ error: "Something went wrong. Please try again later" });
+  }
+});
+
+// @desc      Get User's 6 months transactions
+// @route     GET /api/biyearly-transactions
+// @access    Private
+exports.getBiYearlyTransactions = asyncHandler(async (req, res, next) => {
+  try {
+    const user = await authorize(req);
+    if (!user) res.status(403).send({ error: "User not authorized" });
+    const biYearlyTransactions = await Transaction.aggregate([
+      {
+        $match: {
+          $or: [{ from: user.walletAddress }, { to: user.walletAddress }],
+        },
+      },
+      {
+        $group: {
+          _id: {
+            month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+          },
+          count: { $sum: 1 }, // Count the number of transactions in each group
+          transactions: { $push: "$$ROOT" }, // Store the transactions in each group
+        },
+      },
+      {
+        $sort: {
+          "_id.month": 1, // Sort by month in descending order (newest first)
+        },
+      },
+    ]);
+    const data = biYearlyTransactions.map((transaction) => ({
+      month: transaction._id.month,
+      count: transaction.count,
+    }));
+
+    res.status(200).send({
+      success: true,
+      data: data,
+    });
+  } catch (err) {
+    console.error(err);
     res
       .status(500)
       .send({ error: "Something went wrong. Please try again later" });
@@ -305,7 +352,6 @@ exports.changePassword = asyncHandler(async (req, res, next) => {
         },
         { returnOriginal: false }
       );
-      console.log(user.password, newUser.password);
     } else {
       res.status(404).json({
         error: true,

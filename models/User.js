@@ -19,6 +19,10 @@ const UserSchema = mongoose.Schema({
     required: [true, "Please add a password"],
     minlength: [8, "Password should contain at least 8 characters"],
   },
+  sharedPoints: {
+    type: Number,
+    default: 0,
+  },
   role: {
     type: String,
     default: "user",
@@ -31,7 +35,7 @@ const UserSchema = mongoose.Schema({
   },
   balance: {
     type: Number,
-    default: 100,
+    default: 1000,
   },
 });
 // Encrypt password using bcrypt

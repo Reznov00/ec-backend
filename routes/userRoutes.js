@@ -10,8 +10,8 @@ const {
   authorizeToken,
   sendPoints,
   getUserTransactions,
+  getBiYearlyTransactions,
 } = require("../controllers/userController");
-const auth = require("../middlewares/auth");
 
 const router = express.Router({ mergeParams: true });
 
@@ -27,6 +27,8 @@ router.route("/delete/:id").delete(deleteUser);
 router.route("/changePassword/:id").put(changePassword);
 
 router.route("/sendPoints").post(sendPoints);
+
 router.route("/transactions").get(getUserTransactions);
+router.route("/biYearlyTransactions").get(getBiYearlyTransactions);
 
 module.exports = router;

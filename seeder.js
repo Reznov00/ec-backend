@@ -20,7 +20,7 @@ const resetAccounts = async () => {
     console.log("ACCOUNTS RESET!".yellow.inverse);
     process.exit();
   } catch (err) {
-    console.log(err);
+    console.error(err);
   }
 };
 
@@ -31,7 +31,7 @@ const resetDB = async () => {
     console.log("DB RESET!".red.inverse);
     process.exit();
   } catch (err) {
-    console.log(err);
+    console.error(err);
   }
 };
 
