@@ -68,7 +68,18 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
       const token = jwt.sign({ user }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN,
       });
-      res.status(200).json({ token });
+      res.status(200).json({
+        token: token,
+        user: {
+          name: user.name,
+          email: user.email,
+          wallet: user.walletAddress,
+          privateKey: user.privateKey,
+          balance: user.balance,
+          role: user.role,
+          sharedPoints: user.sharedPoints,
+        },
+      });
     } else {
       return next(new ErrorResponse(401, "Passwords do not match"));
     }
