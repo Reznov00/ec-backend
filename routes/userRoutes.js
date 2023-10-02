@@ -15,20 +15,23 @@ const {
 
 const router = express.Router({ mergeParams: true });
 
-router.route("/").get(getUsers);
-
+// General routes
 router.route("/login").post(loginUser);
 router.route("/register").post(registerUser);
 router.route("/verify").post(verifyUser);
 router.route("/auth").get(authorizeToken);
 
+// Admin Routes
+router.route("/").get(getUsers);
 router.route("/update/:id").put(updateUser);
 router.route("/delete/:id").delete(deleteUser);
-router.route("/changePassword/:id").put(changePassword);
 
+// User Routes
 router.route("/sendPoints").post(sendPoints);
-
 router.route("/transactions").get(getUserTransactions);
 router.route("/biYearlyTransactions").get(getBiYearlyTransactions);
+
+// Unused routes
+router.route("/changePassword/:id").put(changePassword);
 
 module.exports = router;
