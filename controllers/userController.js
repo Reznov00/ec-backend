@@ -72,6 +72,7 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
       res.status(200).json({
         token: token,
         user: {
+          id: user._id,
           name: user.name,
           email: user.email,
           wallet: user.walletAddress,
@@ -108,6 +109,7 @@ exports.authorizeToken = asyncHandler(async (req, res, next) => {
     res.status(200).json({
       authenticated: true,
       user: {
+        id: user._id,
         name: user.name,
         email: user.email,
         wallet: user.walletAddress,
@@ -375,6 +377,36 @@ exports.changePassword = asyncHandler(async (req, res, next) => {
     success: true,
     data: user,
   });
+});
+
+// @desc      Update user
+// @route     GET /api/user/:id
+// @access    Private/Admin
+exports.getSingleUser = asyncHandler(async (req, res, next) => {
+  try {
+    const userLoggedIn = await authorize(req);
+    if (!userLoggedIn && userLoggedIn.role !== "admin")
+      res.status(403).send({ error: "User not authorized" });
+    const user = await User.findById(req.params.id);
+    res.status(200).json({
+      success: true,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        wallet: user.walletAddress,
+        privateKey: user.privateKey,
+        balance: user.balance,
+        role: user.role,
+        sharedPoints: user.sharedPoints,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .send({ error: "Something went wrong. Please try again later" });
+  }
 });
 
 // @desc      Update user

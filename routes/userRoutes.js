@@ -11,6 +11,7 @@ const {
   sendPoints,
   getUserTransactions,
   getBiYearlyTransactions,
+  getSingleUser,
 } = require("../controllers/userController");
 
 const router = express.Router({ mergeParams: true });
@@ -23,6 +24,7 @@ router.route("/auth").get(authorizeToken);
 
 // Admin Routes
 router.route("/").get(getUsers);
+router.route("/user/:id").get(getSingleUser);
 router.route("/update/:id").put(updateUser);
 router.route("/delete/:id").delete(deleteUser);
 
