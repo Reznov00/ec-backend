@@ -25,7 +25,6 @@ exports.getUsers = asyncHandler(async (req, res, next) => {
       return;
     }
     const users = await User.find({ role: { $ne: "admin" } });
-    console.log("users", users);
     res.status(200).json({
       success: true,
       count: users.length,
