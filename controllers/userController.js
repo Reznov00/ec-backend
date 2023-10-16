@@ -330,8 +330,6 @@ exports.verifyUser = asyncHandler(async (req, res, next) => {
       to: req.body.email,
       subject: "Email Verification - EnviroControl",
       html: html,
-      // subject: "Verify User",
-      // text: `Hello, ${req.body.name}! Your OTP is ${OTP}`,
     };
 
     transporter.sendMail(mailOptions, function (error, info) {
