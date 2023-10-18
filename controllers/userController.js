@@ -410,24 +410,46 @@ exports.getSingleUser = asyncHandler(async (req, res, next) => {
 // @route     PUT /api/users/:id
 // @access    Private/Admin
 exports.updateUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-
-  res.status(200).json({
-    success: true,
-    data: user,
-  });
+  try {
+    const userLoggedIn = await authorize(req);
+    if (!userLoggedIn && userLoggedIn.role !== "admin")
+      res.status(403).send({ error: "User not authorized" });
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { balance: req.body.balance } },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .send({ error: "Something went wrong. Please try again later" });
+  }
 });
 
 // @desc      Delete user
 // @route     DELETE /api/users/:id
 // @access    Private/Admin
 exports.deleteUser = asyncHandler(async (req, res, next) => {
-  await User.findByIdAndDelete(req.params.id);
-
-  res.status(200).json({
-    success: true,
-  });
+  try {
+    const userLoggedIn = await authorize(req);
+    if (!userLoggedIn && userLoggedIn.role !== "admin")
+      res.status(403).send({ error: "User not authorized" });
+    await User.findByIdAndDelete(req.params.id);
+    res.status(200).json({
+      success: true,
+    });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .send({ error: "Something went wrong. Please try again later" });
+  }
 });
