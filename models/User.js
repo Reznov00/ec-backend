@@ -30,6 +30,10 @@ const UserSchema = mongoose.Schema({
   walletAddress: {
     type: String,
   },
+  topPerformer: {
+    type: Boolean,
+    default: false,
+  },
   privateKey: {
     type: String,
   },

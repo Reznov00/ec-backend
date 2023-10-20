@@ -79,6 +79,7 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
           balance: user.balance,
           role: user.role,
           sharedPoints: user.sharedPoints,
+          topPerformer: user.topPerformer,
         },
       });
     } else {
@@ -116,6 +117,7 @@ exports.authorizeToken = asyncHandler(async (req, res, next) => {
         balance: user.balance,
         role: user.role,
         sharedPoints: user.sharedPoints,
+        topPerformer: user.topPerformer,
       },
     });
     next();
@@ -396,6 +398,7 @@ exports.getSingleUser = asyncHandler(async (req, res, next) => {
         balance: user.balance,
         role: user.role,
         sharedPoints: user.sharedPoints,
+        topPerformer: user.topPerformer,
       },
     });
   } catch (err) {
