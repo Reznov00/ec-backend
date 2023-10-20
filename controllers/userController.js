@@ -415,8 +415,10 @@ exports.getSingleUser = asyncHandler(async (req, res, next) => {
 exports.updateUser = asyncHandler(async (req, res, next) => {
   try {
     const userLoggedIn = await authorize(req);
-    if (!userLoggedIn && userLoggedIn.role !== "admin")
+    if (!userLoggedIn) res.status(403).send({ error: "User not authorized" });
+    if (userLoggedIn.role !== "admin" && req.body.balance > 0)
       res.status(403).send({ error: "User not authorized" });
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { $inc: { balance: req.body.balance } },
