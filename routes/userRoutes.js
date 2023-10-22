@@ -3,7 +3,6 @@ const {
   getUsers,
   loginUser,
   registerUser,
-  updateUser,
   deleteUser,
   verifyUser,
   changePassword,
@@ -12,6 +11,8 @@ const {
   getUserTransactions,
   getBiYearlyTransactions,
   getSingleUser,
+  sendRewards,
+  makeTopPerformer,
 } = require("../controllers/userController");
 
 const router = express.Router({ mergeParams: true });
@@ -25,7 +26,8 @@ router.route("/auth").get(authorizeToken);
 // Admin Routes
 router.route("/").get(getUsers);
 router.route("/user/:id").get(getSingleUser);
-router.route("/update/:id").put(updateUser);
+router.route("/reward/:id").put(sendRewards);
+router.route("/topPerformer/:id").put(makeTopPerformer);
 router.route("/delete/:id").delete(deleteUser);
 
 // User Routes

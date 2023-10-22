@@ -410,9 +410,9 @@ exports.getSingleUser = asyncHandler(async (req, res, next) => {
 });
 
 // @desc      Update user
-// @route     PUT /api/users/:id
-// @access    Private/Admin
-exports.updateUser = asyncHandler(async (req, res, next) => {
+// @route     PUT /api/reward/:id
+// @access    Admin
+exports.sendRewards = asyncHandler(async (req, res, next) => {
   try {
     const userLoggedIn = await authorize(req);
     if (!userLoggedIn) res.status(403).send({ error: "User not authorized" });
@@ -422,6 +422,36 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { $inc: { balance: req.body.balance } },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .send({ error: "Something went wrong. Please try again later" });
+  }
+});
+
+// @desc      Update user
+// @route     PUT /api/topPerformer/:id
+// @access    Admin
+exports.makeTopPerformer = asyncHandler(async (req, res, next) => {
+  try {
+    const userLoggedIn = await authorize(req);
+    if (!userLoggedIn) res.status(403).send({ error: "User not authorized" });
+    if (userLoggedIn.role !== "admin" && req.body.balance > 0)
+      res.status(403).send({ error: "User not authorized" });
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { topPerformer: true },
       {
         new: true,
         runValidators: true,
