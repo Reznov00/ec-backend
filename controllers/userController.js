@@ -409,10 +409,10 @@ exports.getSingleUser = asyncHandler(async (req, res, next) => {
   }
 });
 
-// @desc      Update user
-// @route     PUT /api/reward/:id
+// @desc      Send Rewards
+// @route     PUT /api/balance/:id
 // @access    Admin
-exports.sendRewards = asyncHandler(async (req, res, next) => {
+exports.updateBalance = asyncHandler(async (req, res, next) => {
   try {
     const userLoggedIn = await authorize(req);
     if (!userLoggedIn) res.status(403).send({ error: "User not authorized" });

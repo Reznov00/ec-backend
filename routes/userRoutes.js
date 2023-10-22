@@ -11,8 +11,8 @@ const {
   getUserTransactions,
   getBiYearlyTransactions,
   getSingleUser,
-  sendRewards,
   makeTopPerformer,
+  updateBalance,
 } = require("../controllers/userController");
 
 const router = express.Router({ mergeParams: true });
@@ -26,7 +26,7 @@ router.route("/auth").get(authorizeToken);
 // Admin Routes
 router.route("/").get(getUsers);
 router.route("/user/:id").get(getSingleUser);
-router.route("/reward/:id").put(sendRewards);
+router.route("/balance/:id").put(updateBalance);
 router.route("/topPerformer/:id").put(makeTopPerformer);
 router.route("/delete/:id").delete(deleteUser);
 
