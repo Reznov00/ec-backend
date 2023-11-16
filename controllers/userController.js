@@ -37,6 +37,46 @@ exports.getUsers = asyncHandler(async (req, res, next) => {
   }
 });
 
+// @desc      Get all transaction
+// @route     GET /api/transaction
+// @access    Admin
+exports.getTransactions = asyncHandler(async (req, res, next) => {
+  const user = await authorize(req);
+  if (user) {
+    if (user.role !== "admin") {
+      res.status(401).json({
+        message: "Not Authorized",
+      });
+      return;
+    }
+    const transactions = await Transaction.find({})
+      .sort({ createdAt: -1 })
+      .exec();
+
+    let data = [];
+    await Promise.all(
+      transactions.map(async (trans) => {
+        const sender = await User.findOne({ walletAddress: trans.from });
+        const receiver = await User.findOne({ walletAddress: trans.to });
+        data.push({
+          ...trans,
+          sender: sender && sender.name,
+          receiver: receiver && receiver.name,
+        });
+      })
+    );
+    res.status(200).json({
+      success: true,
+      count: data.length,
+      data: data,
+    });
+  } else {
+    res.status(404).json({
+      message: "Bad request",
+    });
+  }
+});
+
 // @desc      Get single user
 // @route     GET /api/users/:id
 // @access    Private
@@ -217,7 +257,7 @@ exports.sendPoints = asyncHandler(async (req, res, next) => {
 });
 
 // @desc      Get User Transactios
-// @route     GET /api/transactions/
+// @route     GET /api/user-transactions/
 // @access    Private
 exports.getUserTransactions = asyncHandler(async (req, res, next) => {
   try {
