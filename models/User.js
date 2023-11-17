@@ -19,6 +19,10 @@ const UserSchema = mongoose.Schema({
     required: [true, "Please add a password"],
     minlength: [8, "Password should contain at least 8 characters"],
   },
+  consumedPoints: {
+    type: Number,
+    default: 0,
+  },
   sharedPoints: {
     type: Number,
     default: 0,

@@ -14,6 +14,7 @@ const {
   makeTopPerformer,
   updateBalance,
   getTransactions,
+  calculateFootprint,
 } = require("../controllers/userController");
 
 const router = express.Router({ mergeParams: true });
@@ -34,6 +35,7 @@ router.route("/delete/:id").delete(deleteUser);
 
 // User Routes
 router.route("/sendPoints").post(sendPoints);
+router.route("/calculate/").put(calculateFootprint);
 router.route("/user-transactions").get(getUserTransactions);
 router.route("/biYearlyTransactions").get(getBiYearlyTransactions);
 

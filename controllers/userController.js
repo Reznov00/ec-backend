@@ -256,6 +256,22 @@ exports.sendPoints = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc      Calculate Footprint
+// @route     POST api/calculate
+// @access    Private
+exports.calculateFootprint = asyncHandler(async (req, res, next) => {
+  const user = await authorize(req);
+  if (!user) res.status(403).send({ error: "User not authorized" });
+
+  const updatedUser = await User.findByIdAndUpdate(
+    user.id,
+    { $inc: { balance: -req.body.balance, consumedPoints: req.body.balance } },
+    { new: true }
+  );
+
+  res.status(201).json({ updatedUser });
+});
+
 // @desc      Get User Transactios
 // @route     GET /api/user-transactions/
 // @access    Private
