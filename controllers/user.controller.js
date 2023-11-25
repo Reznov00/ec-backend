@@ -9,6 +9,7 @@ const User = require("../models/User");
 const Transaction = require("../models/Transaction");
 
 const web3 = require("../utils/Web3Provider");
+const { authorize } = require("../utils/authorize");
 const asyncHandler = require("../middlewares/async");
 const ErrorResponse = require("../utils/errorResponse");
 
@@ -17,24 +18,19 @@ const ErrorResponse = require("../utils/errorResponse");
 // @access    Admin
 exports.getUsers = asyncHandler(async (req, res, next) => {
   const user = await authorize(req);
-  if (user) {
-    if (user.role !== "admin") {
-      res.status(401).json({
-        message: "Not Authorized",
-      });
-      return;
-    }
-    const users = await User.find({ role: { $ne: "admin" } });
-    res.status(200).json({
-      success: true,
-      count: users.length,
-      data: users,
+  if (!user) res.status(404).json({ message: "Bad request" });
+  if (user.role !== "admin") {
+    res.status(401).json({
+      message: "Not Authorized",
     });
-  } else {
-    res.status(404).json({
-      message: "Bad request",
-    });
+    return;
   }
+  const users = await User.find({ role: { $ne: "admin" } });
+  res.status(200).json({
+    success: true,
+    count: users.length,
+    data: users,
+  });
 });
 
 // @desc      Get all transaction
@@ -119,6 +115,7 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
           balance: user.balance,
           role: user.role,
           sharedPoints: user.sharedPoints,
+          consumedPoints: user.consumedPoints,
           topPerformer: user.topPerformer,
         },
       });
@@ -127,18 +124,6 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
     }
   });
 });
-
-const authorize = async (req) => {
-  try {
-    if (!req.headers.authorization) return;
-    const token = String(req?.headers?.authorization?.replace("Bearer ", ""));
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findOne({ email: decoded.user.email });
-    return user;
-  } catch (e) {
-    console.error(e);
-  }
-};
 
 // @desc      Authorize Token
 // @route     GET api/auth/
@@ -157,6 +142,7 @@ exports.authorizeToken = asyncHandler(async (req, res, next) => {
         balance: user.balance,
         role: user.role,
         sharedPoints: user.sharedPoints,
+        consumedPoints: user.consumedPoints,
         topPerformer: user.topPerformer,
       },
     });
@@ -257,18 +243,21 @@ exports.sendPoints = asyncHandler(async (req, res, next) => {
 });
 
 // @desc      Calculate Footprint
-// @route     POST api/calculate
+// @route     PUT api/calculate
 // @access    Private
 exports.calculateFootprint = asyncHandler(async (req, res, next) => {
   const user = await authorize(req);
   if (!user) res.status(403).send({ error: "User not authorized" });
-
   const updatedUser = await User.findByIdAndUpdate(
     user.id,
-    { $inc: { balance: -req.body.balance, consumedPoints: req.body.balance } },
-    { new: true }
+    {
+      $inc: {
+        balance: req.body.balance,
+        consumedPoints: req.body.consumed,
+      },
+    },
+    { returnOriginal: false }
   );
-
   res.status(201).json({ updatedUser });
 });
 
@@ -367,7 +356,6 @@ exports.verifyUser = asyncHandler(async (req, res, next) => {
       error: true,
       msg: "User already exists",
     });
-    // return next(new ErrorResponse(403, 'User Already Registered'));
   } else {
     const filePath = path.join(__dirname, "../views/email.handlebars");
     const source = fs.readFileSync(filePath, "utf8");
@@ -454,6 +442,7 @@ exports.getSingleUser = asyncHandler(async (req, res, next) => {
         balance: user.balance,
         role: user.role,
         sharedPoints: user.sharedPoints,
+        consumedPoints: user.consumedPoints,
         topPerformer: user.topPerformer,
       },
     });
@@ -472,7 +461,7 @@ exports.updateBalance = asyncHandler(async (req, res, next) => {
   try {
     const userLoggedIn = await authorize(req);
     if (!userLoggedIn) res.status(403).send({ error: "User not authorized" });
-    if (userLoggedIn.role !== "admin" && req.body.balance > 0)
+    if (userLoggedIn.role !== "admin")
       res.status(403).send({ error: "User not authorized" });
 
     const user = await User.findByIdAndUpdate(
