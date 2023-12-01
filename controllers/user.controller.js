@@ -248,16 +248,23 @@ exports.sendPoints = asyncHandler(async (req, res, next) => {
 exports.calculateFootprint = asyncHandler(async (req, res, next) => {
   const user = await authorize(req);
   if (!user) res.status(403).send({ error: "User not authorized" });
-  const updatedUser = await User.findByIdAndUpdate(
-    user.id,
-    {
-      $inc: {
-        balance: req.body.balance,
-        consumedPoints: req.body.consumed,
-      },
-    },
-    { returnOriginal: false }
-  );
+  let query;
+  req.body.balance == 0
+    ? (query = {
+        balance: 0,
+        $inc: {
+          consumedPoints: req.body.consumed,
+        },
+      })
+    : {
+        $inc: {
+          balance: req.body.balance,
+          consumedPoints: req.body.consumed,
+        },
+      };
+  const updatedUser = await User.findByIdAndUpdate(user.id, query, {
+    returnOriginal: false,
+  });
   res.status(201).json({ updatedUser });
 });
 
